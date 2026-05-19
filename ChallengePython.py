@@ -22,6 +22,7 @@ while True:
         7 - Sair
         """)
 
+    #Se inserir letra nao quebra o cóigo
     try:
         option = int(input("Opção: "))
 
@@ -85,4 +86,4 @@ while True:
             print("Opção inválida!")
 
     except ValueError:
-        print("Somente numeros de 1 até 7")
+        print("Somente numeros de 1 até 7.")

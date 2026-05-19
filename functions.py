@@ -42,33 +42,18 @@ def login(users: dict) -> tuple[bool, str]:
         attempts: int = 0
 
         while attempts < 3:
-            login_password: str = input(
-                "Digite sua senha: "
-            ).strip()
+            login_password: str = input("Digite sua senha: ").strip()
 
-            if (
-                login_password
-                == users[login_cpf]["password"]
-            ):
+            if (login_password == users[login_cpf]["password"]):
                 print("Login realizado com sucesso!")
 
-                print(
-                    f"Bem vindo "
-                    f"{users[login_cpf]['name']}, "
-                    f"seu saldo é de "
-                    f"{users[login_cpf]['points_balance']} "
-                    f"pontos."
-                )
+                print(f"Bem vindo {users[login_cpf]['name']}, seu saldo é de {users[login_cpf]['points_balance']} pontos.")
 
                 return True, login_cpf
 
             attempts += 1
 
-            print(
-                f"Senha incorreta! "
-                f"Tentativas restantes: "
-                f"{3 - attempts}"
-            )
+            print(f"Senha incorreta! Tentativas restantes: {3 - attempts}")
 
         print("Acesso bloqueado!")
 
@@ -79,77 +64,42 @@ def login(users: dict) -> tuple[bool, str]:
 
 
 # converter pontos
-def convert_points(
-    users: dict,
-    current_user: str
-) -> None:
+def convert_points(users: dict, current_user: str) -> None:
 
-    points_to_convert: float = float(
-        input("Quantos pontos deseja converter: ")
-    )
+    print(f"Seu saldo é de {users[current_user]['points_balance']} pontos.")
+    
+    points_to_convert: float = float(input("Quantos pontos deseja converter: "))
 
-    if (
-        points_to_convert
-        <= users[current_user]["points_balance"]
-    ):
-        users[current_user][
-            "points_balance"
-        ] -= points_to_convert
+    if (points_to_convert<= users[current_user]["points_balance"]):
+        users[current_user]["points_balance"] -= points_to_convert
 
         money: float = points_to_convert / 10
 
-        users[current_user][
-            "money_balance"
-        ] += money
+        users[current_user]["money_balance"] += money
 
-        print(
-            f"Novo saldo de pontos: "
-            f"{users[current_user]['points_balance']}"
-        )
+        print(f"Novo saldo de pontos: {users[current_user]['points_balance']}")
 
-        print(
-            f"Saldo em reais: "
-            f"R$"
-            f"{users[current_user]['money_balance']:.2f}"
-        )
+        print(f"Saldo em reais: R${users[current_user]['money_balance']:.2f}")
 
     else:
         print("Saldo insuficiente!")
 
 
 # sacar dinheiro
-def withdraw_money(
-    users: dict,
-    current_user: str
-) -> None:
+def withdraw_money(users: dict, current_user: str) -> None:
 
-    money_balance: float = users[
-        current_user
-    ]["money_balance"]
+    money_balance: float = users[current_user]["money_balance"]
 
     print(f"Você possui R${money_balance:.2f}")
 
-    withdrawal: float = float(
-        input("Quanto deseja sacar: ")
-    )
+    withdrawal: float = float(input("Quanto deseja sacar: "))
 
     if withdrawal <= money_balance:
-        users[current_user][
-            "money_balance"
-        ] -= withdrawal
+        users[current_user]["money_balance"] -= withdrawal
 
-        print(
-            f"Saque de "
-            f"R${withdrawal:.2f} "
-            f"será realizado "
-            f"em até 48 horas."
-        )
+        print(f"Saque de R${withdrawal:.2f} será realizado em até 48 horas.")
 
-        print(
-            f"Novo saldo: "
-            f"R$"
-            f"{users[current_user]['money_balance']:.2f}"
-        )
+        print(f"Novo saldo: R${users[current_user]['money_balance']:.2f}")
 
     else:
         print("Saldo insuficiente!")
@@ -159,9 +109,7 @@ def withdraw_money(
 def logout() -> tuple[bool]:
     print("\nDeseja fazer Logout?")
 
-    confirmation: str = input(
-        "Sim ou Nao: "
-    ).lower()
+    confirmation: str = input("Sim ou Nao: ").lower()
 
     if confirmation == "sim":
         print("Logout realizado com sucesso!")
@@ -171,31 +119,18 @@ def logout() -> tuple[bool]:
 
 
 # excluir conta
-def delete_account(
-    users: dict,
-    current_user: str
-) -> tuple[bool, str]:
+def delete_account(users: dict,current_user: str) -> tuple[bool, str]:
 
-    confirmation: str = input(
-        "Tem certeza que deseja excluir "
-        "sua conta? (sim/nao): "
-    ).lower()
+    confirmation: str = input("Tem certeza que deseja excluir ""sua conta? (Sim/Nao): ").lower()
 
     if confirmation == "sim":
 
-        password_confirmation: str = input(
-            "Digite sua senha para confirmar: "
-        )
+        password_confirmation: str = input("Digite sua senha para confirmar: ")
 
-        if (
-            password_confirmation
-            == users[current_user]["password"]
-        ):
+        if (password_confirmation == users[current_user]["password"]):
             del users[current_user]
 
-            print(
-                "Conta excluída com sucesso!"
-            )
+            print("Conta excluída com sucesso!")
 
             return False, None
 
