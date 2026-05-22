@@ -59,18 +59,12 @@ while True:
 
         # excluir conta
         elif option == 6:
-            if not logged_in:
-                print(
-                    "Você precisa fazer login "
-                    "para excluir a conta!"
-                )
-                continue
-
-            logged_in, current_user = delete_account(
-                users,
-                current_user
-            )
-
+            if logged_in:
+              logged_in, current_user = delete_account(users, current_user)
+            
+            else:
+                print("Faça login primeiro!")
+        
         # sair
         elif option == 7:
             if logged_in:
@@ -84,6 +78,8 @@ while True:
 
         else:
             print("Opção inválida!")
+
+        input("Pressiona qualquer tecla para continuar . . .")
 
     except ValueError:
         print("Somente numeros de 1 até 7.")

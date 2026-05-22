@@ -12,6 +12,22 @@ def create_account(users: dict) -> None:
     name: str = input("Insira seu nome: ")
     create_user: str = input("CPF (xxx.xxx.xxx-xx): ")
 
+    # validar CPF
+    while (
+        len(create_user) != 14
+        or create_user[3] != "."
+        or create_user[7] != "."
+        or create_user[11] != "-"
+        or not (
+            create_user[:3].isdigit()
+            and create_user[4:7].isdigit()
+            and create_user[8:11].isdigit()
+            and create_user[12:].isdigit()
+        )
+    ):
+        print("ERRO! CPF inválido. Use o formato xxx.xxx.xxx-xx")
+        create_user = input("CPF (xxx.xxx.xxx-xx): ")
+
     if create_user in users:
         print("CPF já cadastrado!")
         return
@@ -32,7 +48,6 @@ def create_account(users: dict) -> None:
     }
 
     print("Conta criada com sucesso!")
-
 
 # login
 def login(users: dict) -> tuple[bool, str]:
@@ -62,7 +77,6 @@ def login(users: dict) -> tuple[bool, str]:
 
     return False, None
 
-
 # converter pontos
 def convert_points(users: dict, current_user: str) -> None:
 
@@ -70,16 +84,26 @@ def convert_points(users: dict, current_user: str) -> None:
     
     points_to_convert: float = float(input("Quantos pontos deseja converter: "))
 
-    if (points_to_convert<= users[current_user]["points_balance"]):
-        users[current_user]["points_balance"] -= points_to_convert
+    if points_to_convert <= users[current_user]["points_balance"]:
 
-        money: float = points_to_convert / 10
+        confirm: str = input(f"Tem certeza que deseja converter {points_to_convert} pontos em R${(points_to_convert/10):.2f}? (sim/não): ").strip().lower()
 
-        users[current_user]["money_balance"] += money
+        match confirm:
+            case "sim" | "ss" | "s":
+                users[current_user]["points_balance"] -= points_to_convert
 
-        print(f"Novo saldo de pontos: {users[current_user]['points_balance']}")
+                money: float = points_to_convert / 10
 
-        print(f"Saldo em reais: R${users[current_user]['money_balance']:.2f}")
+                users[current_user]["money_balance"] += money
+
+                print(f"Novo saldo de pontos: {users[current_user]['points_balance']}")
+                print(f"Saldo em reais: R${users[current_user]['money_balance']:.2f}")
+
+            case "nao" | "não" | "nn" | "n":
+                print("Conversão cancelada.")
+
+            case _:
+                print("Apenas sim ou não.")
 
     else:
         print("Saldo insuficiente!")
@@ -95,48 +119,77 @@ def withdraw_money(users: dict, current_user: str) -> None:
     withdrawal: float = float(input("Quanto deseja sacar: "))
 
     if withdrawal <= money_balance:
-        users[current_user]["money_balance"] -= withdrawal
 
-        print(f"Saque de R${withdrawal:.2f} será realizado em até 48 horas.")
+        confirm: str = input(f"Tem certeza que deseja sacar R${withdrawal:.2f}? (sim/não): ").strip().lower()
 
-        print(f"Novo saldo: R${users[current_user]['money_balance']:.2f}")
+        match confirm:
+            case "sim" | "ss" | "s":
+                users[current_user]["money_balance"] -= withdrawal
+
+                print(f"Saque de R${withdrawal:.2f} será realizado em até 48 horas.")
+                print(f"Novo saldo: R${users[current_user]['money_balance']:.2f}")
+
+            case "nao" | "não" | "nn" | "n":
+                print("Saque cancelado.")
+
+            case _:
+                print("Apenas sim ou não.")
 
     else:
         print("Saldo insuficiente!")
 
 
 # logout
-def logout() -> tuple[bool]:
+def logout() -> tuple[bool, None]:
+
     print("\nDeseja fazer Logout?")
 
-    confirmation: str = input("Sim ou Nao: ").lower()
+    confirmation: str = input("Sim ou Nao: ").strip().lower()
 
-    if confirmation == "sim":
-        print("Logout realizado com sucesso!")
-        return False, None
+    match confirmation:
+        case "sim" | "ss" | "s":
+            print("Logout realizado com sucesso!")
+            return False, None
 
-    return True, None
+        case "nao" | "não" | "nn" | "n":
+            print("Logout cancelado.")
+            return True, None
+
+        case _:
+            print("Apenas sim ou nao.")
+            return True, None
 
 
 # excluir conta
-def delete_account(users: dict,current_user: str) -> tuple[bool, str]:
+def delete_account(users: dict, current_user: str | None) -> tuple[bool, str | None]:
 
-    confirmation: str = input("Tem certeza que deseja excluir ""sua conta? (Sim/Nao): ").lower()
+    if current_user is None:
+        print("Nenhum usuário logado!")
+        return False, None
 
-    if confirmation == "sim":
+    confirmation: str = input(
+        "Tem certeza que deseja excluir sua conta? (Sim/Nao): "
+    ).strip().lower()
 
-        password_confirmation: str = input("Digite sua senha para confirmar: ")
+    match confirmation:
+        case "sim" | "ss" | "s":
 
-        if (password_confirmation == users[current_user]["password"]):
-            del users[current_user]
+            password_confirmation: str = input("Digite sua senha para confirmar: ")
 
-            print("Conta excluída com sucesso!")
+            if password_confirmation == users[current_user]["password"]:
+                del users[current_user]
 
-            return False, None
+                print("Conta excluída com sucesso!")
 
-        print("Senha incorreta!")
+                return False, None
 
-    else:
-        print("Exclusão cancelada.")
+            print("Senha incorreta!")
+            return True, current_user
 
-    return True, current_user
+        case "nao" | "não" | "nn" | "n":
+            print("Exclusão cancelada.")
+            return True, current_user
+
+        case _:
+            print("Apenas sim ou nao.")
+            return True, current_user
