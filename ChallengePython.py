@@ -15,71 +15,80 @@ while True:
         Selecione a opção desejada:
         1 - Criar Conta
         2 - Fazer Login
-        3 - Converter Pontos
-        4 - Sacar Dinheiro
-        5 - Fazer Logout
-        6 - Excluir Conta
-        7 - Sair
+        3 - Assistir Videos
+        4 - Converter Pontos
+        5 - Sacar Dinheiro
+        6 - Fazer Logout
+        7 - Excluir Conta
+        0 - Sair
         """)
 
     #Se inserir letra nao quebra o cóigo
     try:
         option = int(input("Opção: "))
+        match option:
+            # criar conta
+            case 1:
+                create_account(users)
 
-        # criar conta
-        if option == 1:
-            create_account(users)
+            # login
+            case 2:
+                if not logged_in:
+                    logged_in, current_user = login(users)
+                    continue
+                
+                print("Você já está logado")
 
-        # login
-        elif option == 2:
-            logged_in, current_user = login(users)
+            case 3:
+                if not logged_in:
+                    print("Você precisa fazer login primeiro!")
+                    continue
+                
+                watch_videos(users, current_user)
 
-        # converter pontos
-        elif option == 3:
-            if not logged_in:
-                print("Você precisa fazer login primeiro!")
-                continue
+            # converter pontos
+            case 4:
+                if not logged_in:
+                    print("Você precisa fazer login primeiro!")
+                    continue
 
-            convert_points(users, current_user)
+                convert_points(users, current_user)
 
-        # sacar dinheiro
-        elif option == 4:
-            if not logged_in:
-                print("Você precisa fazer login primeiro!")
-                continue
+            # sacar dinheiro
+            case 5:
+                if not logged_in:
+                    print("Você precisa fazer login primeiro!")
+                    continue
 
-            withdraw_money(users, current_user)
+                withdraw_money(users, current_user)
 
-        # logout
-        elif option == 5:
-            if logged_in:
-                logged_in, current_user = logout()
-            else:
-                print("Nenhum usuário logado!")
+            # logout
+            case 6:
+                if logged_in:
+                    logged_in, current_user = logout()
+                else:
+                    print("Nenhum usuário logado!")
 
-        # excluir conta
-        elif option == 6:
-            if logged_in:
-              logged_in, current_user = delete_account(users, current_user)
-            
-            else:
-                print("Faça login primeiro!")
-        
-        # sair
-        elif option == 7:
-            if logged_in:
-                print(
-                    "Você precisa fazer logout "
-                    "antes de sair!"
-                )
-            else:
-                print("Encerrando...")
-                break
+            # excluir conta
+            case 7:
+                if logged_in:
+                    logged_in, current_user = delete_account(users, current_user)
+                
+                else:
+                    print("Faça login primeiro!")
 
-        else:
-            print("Opção inválida!")
+            # sair
+            case 0:
+                if logged_in:
+                    print("Você precisa fazer logout antes de sair!")
+                else:
+                    print("Encerrando...")
+                    break
 
-        input("Pressiona qualquer tecla para continuar . . .")
+            case _:
+                print("Opção inválida!")
+
+        input("Pressiona ENTER para continuar . . .")
 
     except ValueError:
-        print("Somente numeros de 1 até 7.")
+        print("Somente numeros de 0 até 7.")

@@ -1,5 +1,6 @@
-import os
 import random
+import datetime
+import os
 
 
 # limpar terminal
@@ -8,8 +9,10 @@ def clear_screen() -> None:
 
 
 # criar conta
-def create_account(users: dict) -> None:
+def create_account(d: dict) -> None:
     name: str = input("Insira seu nome: ")
+    while len(name) < 3:
+        name: str = input("Insira seu nome: ")
     create_user: str = input("CPF (xxx.xxx.xxx-xx): ")
 
     # validar CPF
@@ -28,7 +31,7 @@ def create_account(users: dict) -> None:
         print("ERRO! CPF inválido. Use o formato xxx.xxx.xxx-xx")
         create_user = input("CPF (xxx.xxx.xxx-xx): ")
 
-    if create_user in users:
+    if create_user in d:
         print("CPF já cadastrado!")
         return
 
@@ -38,9 +41,9 @@ def create_account(users: dict) -> None:
         print("ERRO! Senha precisa ter pelo menos 6 caracteres.")
         create_password = input("Crie uma senha: ")
 
-    balance: int = random.randint(50, 1000)
+    balance: int = 0
 
-    users[create_user] = {
+    d[create_user] = {
         "name": name,
         "password": create_password,
         "points_balance": balance,
@@ -50,19 +53,19 @@ def create_account(users: dict) -> None:
     print("Conta criada com sucesso!")
 
 # login
-def login(users: dict) -> tuple[bool, str]:
+def login(d: dict) -> tuple[bool, str]:
     login_cpf: str = input("Digite seu CPF: ")
 
-    if login_cpf in users:
+    if login_cpf in d:
         attempts: int = 0
 
         while attempts < 3:
             login_password: str = input("Digite sua senha: ").strip()
 
-            if (login_password == users[login_cpf]["password"]):
+            if (login_password == d[login_cpf]["password"]):
                 print("Login realizado com sucesso!")
 
-                print(f"Bem vindo {users[login_cpf]['name']}, seu saldo é de {users[login_cpf]['points_balance']} pontos.")
+                print(f"Bem vindo {d[login_cpf]['name']}, seu saldo é de {d[login_cpf]['points_balance']} pontos.")
 
                 return True, login_cpf
 
@@ -78,26 +81,26 @@ def login(users: dict) -> tuple[bool, str]:
     return False, None
 
 # converter pontos
-def convert_points(users: dict, current_user: str) -> None:
+def convert_points(d: dict, current_user: str) -> None:
 
-    print(f"Seu saldo é de {users[current_user]['points_balance']} pontos.")
+    print(f"Seu saldo é de {d[current_user]['points_balance']} pontos.")
     
     points_to_convert: float = float(input("Quantos pontos deseja converter: "))
 
-    if points_to_convert <= users[current_user]["points_balance"]:
+    if points_to_convert <= d[current_user]["points_balance"]:
 
         confirm: str = input(f"Tem certeza que deseja converter {points_to_convert} pontos em R${(points_to_convert/10):.2f}? (sim/não): ").strip().lower()
 
         match confirm:
             case "sim" | "ss" | "s":
-                users[current_user]["points_balance"] -= points_to_convert
+                d[current_user]["points_balance"] -= points_to_convert
 
                 money: float = points_to_convert / 10
 
-                users[current_user]["money_balance"] += money
+                d[current_user]["money_balance"] += money
 
-                print(f"Novo saldo de pontos: {users[current_user]['points_balance']}")
-                print(f"Saldo em reais: R${users[current_user]['money_balance']:.2f}")
+                print(f"Novo saldo de pontos: {d[current_user]['points_balance']}")
+                print(f"Saldo em reais: R${d[current_user]['money_balance']:.2f}")
 
             case "nao" | "não" | "nn" | "n":
                 print("Conversão cancelada.")
@@ -110,9 +113,9 @@ def convert_points(users: dict, current_user: str) -> None:
 
 
 # sacar dinheiro
-def withdraw_money(users: dict, current_user: str) -> None:
+def withdraw_money(d: dict, current_user: str) -> None:
 
-    money_balance: float = users[current_user]["money_balance"]
+    money_balance: float = d[current_user]["money_balance"]
 
     print(f"Você possui R${money_balance:.2f}")
 
@@ -124,10 +127,10 @@ def withdraw_money(users: dict, current_user: str) -> None:
 
         match confirm:
             case "sim" | "ss" | "s":
-                users[current_user]["money_balance"] -= withdrawal
+                d[current_user]["money_balance"] -= withdrawal
 
                 print(f"Saque de R${withdrawal:.2f} será realizado em até 48 horas.")
-                print(f"Novo saldo: R${users[current_user]['money_balance']:.2f}")
+                print(f"Novo saldo: R${d[current_user]['money_balance']:.2f}")
 
             case "nao" | "não" | "nn" | "n":
                 print("Saque cancelado.")
@@ -161,23 +164,21 @@ def logout() -> tuple[bool, None]:
 
 
 # excluir conta
-def delete_account(users: dict, current_user: str | None) -> tuple[bool, str | None]:
+def delete_account(d: dict, current_user: str | None) -> tuple[bool, str | None]:
 
     if current_user is None:
         print("Nenhum usuário logado!")
         return False, None
 
-    confirmation: str = input(
-        "Tem certeza que deseja excluir sua conta? (Sim/Nao): "
-    ).strip().lower()
+    confirmation: str = input("Tem certeza que deseja excluir sua conta? (Sim/Nao): ").strip().lower()
 
     match confirmation:
         case "sim" | "ss" | "s":
 
             password_confirmation: str = input("Digite sua senha para confirmar: ")
 
-            if password_confirmation == users[current_user]["password"]:
-                del users[current_user]
+            if password_confirmation == d[current_user]["password"]:
+                del d[current_user]
 
                 print("Conta excluída com sucesso!")
 
@@ -193,3 +194,60 @@ def delete_account(users: dict, current_user: str | None) -> tuple[bool, str | N
         case _:
             print("Apenas sim ou nao.")
             return True, current_user
+
+
+def watch_videos(d: dict, current_user: str) -> None:
+
+    hour = datetime.datetime.now().strftime("%H:%M")
+
+    watched_videos = 0
+
+    while True:
+
+        print(f"""
+    ┌─────────────────────┐
+    │       {hour}         │
+    │                     │
+    │     -SOUL UP-       │
+    │                     |
+    |                     |
+    |                     |
+    │                     |
+    │   1-Assistir Video  │
+    │                     |
+    |                     |
+    |                     |
+    │                     |
+    │       2-Sair        │
+    │                     |
+    |                     |
+    └─────────────────────┘
+    """)
+
+        try:
+            watch = int(input("Escolha uma opção: "))
+
+            match watch:
+
+                case 1:
+                    video_time = random.randint(10, 120)
+
+                    watched_videos += 1
+                    d[current_user]["points_balance"] += video_time
+
+                    print(f"Vídeo assistido: {video_time}s")
+                    print(f"Você ganhou {video_time} pontos!")
+                    print(f"Saldo: {d[current_user]['points_balance']} pontos")
+
+                case 2:
+                    print(f"Você assistiu {watched_videos} videos")
+                    print("Saindo . . .")
+                    break
+
+                case _:
+                    print("Somente 1 ou 2.")
+            
+            input("Pressiona ENTER para continuar . . .")
+
+        except ValueError:
+            print("Somente numeros.")
