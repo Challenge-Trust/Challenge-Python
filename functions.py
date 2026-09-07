@@ -7,6 +7,48 @@ import os
 def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
+def validar_cpf(cpf: str) -> bool:
+    # Remove pontos e hífen
+    cpf = cpf.replace(".", "").replace("-", "")
+
+    if len(cpf) != 11 or not cpf.isdigit():
+        return False
+
+    # Rejeita CPFs com todos os dígitos iguais
+    if cpf == cpf[0] * 11:
+        return False
+
+    soma = 0
+
+    for i in range(9):
+        soma += int(cpf[i]) * (10 - i)
+
+    resto = soma % 11
+
+    if resto < 2:
+        digito1 = 0
+    else:
+        digito1 = 11 - resto
+
+    if int(cpf[9]) != digito1:
+        return False
+
+    soma = 0
+
+    for i in range(10):
+        soma += int(cpf[i]) * (11 - i)
+
+    resto = soma % 11
+
+    if resto < 2:
+        digito2 = 0
+    else:
+        digito2 = 11 - resto
+
+    if int(cpf[10]) != digito2:
+        return False
+
+    return True
 
 # criar conta
 def create_account(d: dict) -> None:
@@ -15,7 +57,6 @@ def create_account(d: dict) -> None:
         name: str = input("Insira seu nome: ")
     create_user: str = input("CPF (xxx.xxx.xxx-xx): ")
 
-    # validar CPF
     while (
         len(create_user) != 14
         or create_user[3] != "."
@@ -27,8 +68,9 @@ def create_account(d: dict) -> None:
             and create_user[8:11].isdigit()
             and create_user[12:].isdigit()
         )
+        or not validar_cpf(create_user)
     ):
-        print("ERRO! CPF inválido. Use o formato xxx.xxx.xxx-xx")
+        print("ERRO! CPF inválido. Use um CPF válido no formato xxx.xxx.xxx-xx")
         create_user = input("CPF (xxx.xxx.xxx-xx): ")
 
     if create_user in d:
