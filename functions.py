@@ -53,7 +53,7 @@ def validar_cpf(cpf: str) -> bool:
 # criar conta
 def create_account(d: dict) -> None:
     name = input("Insira seu nome: ")
-    while len(name) < 3:
+    while len(name) < 3 or not name.replace(" ", "").isalpha():
         name = input("Insira seu nome: ")
     create_user = input("CPF (xxx.xxx.xxx-xx): ")
 
@@ -77,11 +77,11 @@ def create_account(d: dict) -> None:
         print("CPF já cadastrado!")
         return
 
-    create_password = input("Crie uma senha: ")
+    create_password = input("Crie uma senha: ").strip()
 
     while len(create_password) < 6:
         print("ERRO! Senha precisa ter pelo menos 6 caracteres.")
-        create_password = input("Crie uma senha: ")
+        create_password = input("Crie uma senha: ").strip()
 
     balance = 0
 
@@ -96,7 +96,23 @@ def create_account(d: dict) -> None:
 
 # login
 def login(d: dict) -> tuple[bool, str]:
-    login_cpf = input("Digite seu CPF: ")
+    login_cpf = input("CPF (xxx.xxx.xxx-xx): ")
+    
+    while (
+        len(login_cpf) != 14
+        or login_cpf[3] != "."
+        or login_cpf[7] != "."
+        or login_cpf[11] != "-"
+        or not (
+            login_cpf[:3].isdigit()
+            and login_cpf[4:7].isdigit()
+            and login_cpf[8:11].isdigit()
+            and login_cpf[12:].isdigit()
+            )
+        or not validar_cpf(login_cpf)
+        ):
+            print("ERRO! CPF inválido. Use um CPF válido no formato xxx.xxx.xxx-xx")
+            login_cpf = input("CPF (xxx.xxx.xxx-xx): ")
 
     if login_cpf in d:
         attempts = 0
@@ -130,7 +146,7 @@ def convert_points(d: dict, current_user: str) -> None:
     try:
         points_to_convert = float(input("Quantos pontos deseja converter: "))
 
-        if points_to_convert <= d[current_user]["points_balance"]:
+        if 0 < points_to_convert <= d[current_user]["points_balance"]:
 
             confirm = input(f"Tem certeza que deseja converter {points_to_convert} pontos em R${(points_to_convert/10):.2f}? (sim/não): ").strip().lower()
 
@@ -167,7 +183,7 @@ def withdraw_money(d: dict, current_user: str) -> None:
     try:
         withdrawal = float(input("Quanto deseja sacar: "))
 
-        if withdrawal <= money_balance:
+        if 0 < withdrawal <= money_balance:
 
             confirm = input(f"Tem certeza que deseja sacar R${withdrawal:.2f}? (sim/não): ").strip().lower()
 
@@ -243,14 +259,12 @@ def delete_account(d: dict, current_user: str | None) -> tuple[bool, str | None]
             print("Apenas sim ou nao.")
             return True, current_user
 
-
+#Assistir videos para ganhar pontos
 def watch_videos(d: dict, current_user: str) -> None:
-
-    hour = datetime.datetime.now().strftime("%H:%M")
-
     watched_videos = 0
 
     while True:
+        hour = datetime.datetime.now().strftime("%H:%M")
 
         print(f"""
     ┌─────────────────────┐

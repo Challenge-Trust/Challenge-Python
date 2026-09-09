@@ -29,38 +29,37 @@ while True:
         match option:
             # criar conta
             case 1:
-                create_account(users)
+                if not logged_in:
+                    create_account(users)
+                else:
+                    print("Você precisa fazer logout para criar uma conta.")
 
             # login
             case 2:
                 if not logged_in:
                     logged_in, current_user = login(users)
-                    continue
-                
-                print("Você já está logado")
+                else:
+                    print("Você já está logado.")
 
             case 3:
                 if not logged_in:
                     print("Você precisa fazer login primeiro!")
-                    continue
-                
-                watch_videos(users, current_user)
+                else:
+                    watch_videos(users, current_user)
 
             # converter pontos
             case 4:
                 if not logged_in:
                     print("Você precisa fazer login primeiro!")
-                    continue
-
-                convert_points(users, current_user)
+                else:
+                    convert_points(users, current_user)
 
             # sacar dinheiro
             case 5:
                 if not logged_in:
                     print("Você precisa fazer login primeiro!")
-                    continue
-
-                withdraw_money(users, current_user)
+                else:
+                    withdraw_money(users, current_user)
 
             # logout
             case 6:
@@ -73,7 +72,6 @@ while True:
             case 7:
                 if logged_in:
                     logged_in, current_user = delete_account(users, current_user)
-                
                 else:
                     print("Faça login primeiro!")
 
