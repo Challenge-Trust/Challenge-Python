@@ -1,10 +1,12 @@
 import random
 import datetime
 import os
+import json
+import requests
 
+RATE_API_URL = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
 
-# limpar terminal
-def clear_screen() -> None:
+def clear_screen()->None:
     os.system("cls" if os.name == "nt" else "clear")
 
 def validar_cpf(cpf: str) -> bool:
@@ -49,6 +51,48 @@ def validar_cpf(cpf: str) -> bool:
         return False
 
     return True
+    
+# carregar contas do arquivo json
+def load_accounts() -> dict:
+    if not os.path.exists("accounts.jsn"):
+        return {}
+    try:
+        with open("accounts.json", "r", encoding="utf-8") as file:
+            return json.load(file)
+    except (json.JSONDecodeError, OSError):
+        print("Aviso: não foi possível ler accounts.json. Iniciando vazio.")
+        return {}
+
+# salvar contas no arquivo json
+def save_accounts(d: dict) -> None:
+    try:
+        with open("accounts.json", "w", encoding="utf-8") as file:
+            json.dump(d, file, indent=4)
+    except OSError:
+        print("ERRO! Não foi possível salvar as contas.")
+
+# cotação dólar (API pública AwesomeAPI) -> retorna quantos reais vale 1 dólar
+def get_usd_rate() -> float | None:
+    url = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
+
+    cabecalho = {
+        "Accept": "application/json"
+    }
+
+    try:
+        resposta = requests.get(url, headers=cabecalho, timeout=5)
+    except requests.exceptions.RequestException:
+        print("Falha de conexão com a API de cotação.")
+        return None
+
+    print(f"Status: {resposta.status_code}")
+
+    if resposta.status_code == 200:
+        dados = resposta.json()
+        return float(dados["USDBRL"]["bid"])
+
+    print("Falha")
+    return None
 
 # criar conta
 def create_account(d: dict) -> None:
@@ -179,29 +223,46 @@ def withdraw_money(d: dict, current_user: str) -> None:
     money_balance = d[current_user]["money_balance"]
 
     print(f"Você possui R${money_balance:.2f}")
-    
+
     try:
-        withdrawal = float(input("Quanto deseja sacar: "))
+        withdrawal = float(input("Quanto deseja sacar (em R$): "))
 
-        if 0 < withdrawal <= money_balance:
-
-            confirm = input(f"Tem certeza que deseja sacar R${withdrawal:.2f}? (sim/não): ").strip().lower()
-
-            match confirm:
-                case "sim" | "ss" | "s":
-                    d[current_user]["money_balance"] -= withdrawal
-
-                    print(f"Saque de R${withdrawal:.2f} será realizado em até 48 horas.")
-                    print(f"Novo saldo: R${d[current_user]['money_balance']:.2f}")
-
-                case "nao" | "não" | "nn" | "n":
-                    print("Saque cancelado.")
-
-                case _:
-                    print("Apenas sim ou não.")
-
-        else:
+        if not 0 < withdrawal <= money_balance:
             print("Saldo insuficiente!")
+            return
+
+        print("Sacar em:\n1 - Reais\n2 - Dólar")
+        currency = input("Opção: ").strip()
+
+        rate = None
+        if currency == "1":
+            message = f"R${withdrawal:.2f}"
+        elif currency == "2":
+            rate = get_usd_rate()
+            if rate is None:
+                print("Não foi possível obter a cotação do dólar. Tente novamente mais tarde.")
+                return
+            print(f"Cotação atual: US$1 = R${rate:.4f}")
+            message = f"US${withdrawal / rate:.2f} (R${withdrawal:.2f})"
+        else:
+            print("Opção inválida!")
+            return
+
+        confirm = input(f"Tem certeza que deseja sacar {message}? (sim/não): ").strip().lower()
+
+        match confirm:
+            case "sim" | "ss" | "s":
+                d[current_user]["money_balance"] -= withdrawal
+
+                print(f"Saque de {message} será realizado em até 48 horas.")
+                print(f"Novo saldo: R${d[current_user]['money_balance']:.2f}")
+
+            case "nao" | "não" | "nn" | "n":
+                print("Saque cancelado.")
+
+            case _:
+                print("Apenas sim ou não.")
+
     except ValueError:
         print("Somente números")
 

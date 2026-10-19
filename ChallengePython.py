@@ -5,7 +5,8 @@ clear_screen()
 print("Bem Vindo ao Conversor de pontos")
 
 # armazenar usuarios
-users = {}
+user = load_accounts()
+
 
 logged_in = False
 current_user = None
@@ -30,14 +31,14 @@ while True:
             # criar conta
             case 1:
                 if not logged_in:
-                    create_account(users)
+                    create_account(user)
                 else:
                     print("Você precisa fazer logout para criar uma conta.")
 
             # login
             case 2:
                 if not logged_in:
-                    logged_in, current_user = login(users)
+                    logged_in, current_user = login(user)
                 else:
                     print("Você já está logado.")
 
@@ -45,21 +46,21 @@ while True:
                 if not logged_in:
                     print("Você precisa fazer login primeiro!")
                 else:
-                    watch_videos(users, current_user)
+                    watch_videos(user, current_user)
 
             # converter pontos
             case 4:
                 if not logged_in:
                     print("Você precisa fazer login primeiro!")
                 else:
-                    convert_points(users, current_user)
+                    convert_points(user, current_user)
 
             # sacar dinheiro
             case 5:
                 if not logged_in:
                     print("Você precisa fazer login primeiro!")
                 else:
-                    withdraw_money(users, current_user)
+                    withdraw_money(user, current_user)
 
             # logout
             case 6:
@@ -71,7 +72,7 @@ while True:
             # excluir conta
             case 7:
                 if logged_in:
-                    logged_in, current_user = delete_account(users, current_user)
+                    logged_in, current_user = delete_account(user, current_user)
                 else:
                     print("Faça login primeiro!")
 
@@ -85,6 +86,8 @@ while True:
 
             case _:
                 print("Opção inválida!")
+
+        save_accounts(user)
 
         input("Pressiona ENTER para continuar . . .")
 
