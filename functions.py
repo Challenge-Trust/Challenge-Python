@@ -3,8 +3,15 @@ import datetime
 import os
 import json
 import requests
+import oracledb
 
 RATE_API_URL = "https://economia.awesomeapi.com.br/json/last/USD-BRL"
+USER = "RM570451"
+PASSWORD = "171207"
+DSN = "oracle.fiap.com.br:1521/ORCL"
+DB_TABLE = "soulup"
+JSON_FILE = "accounts.json"
+
 
 def clear_screen()->None:
     os.system("cls" if os.name == "nt" else "clear")
@@ -51,25 +58,98 @@ def validar_cpf(cpf: str) -> bool:
         return False
 
     return True
-    
-# carregar contas do arquivo json
+
+# conexão com o banco Oracle
+def connect_db() -> oracledb.Connection:
+    return oracledb.connect(
+        user = USER,
+        password = PASSWORD,
+        dsn = DSN
+    )
+
+# executa INSERT / UPDATE / DELETE com commit. Retorna True se deu certo
+def execute_db(sql: str, params: list) -> bool:
+    try:
+        conn = connect_db()
+    except oracledb.DatabaseError as erro:
+        print("ERRO! Não foi possível conectar ao banco: ", erro)
+        return False
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        conn.commit()
+        return True
+    except oracledb.IntegrityError:
+        conn.rollback()
+        print("CPF já cadastrado!")
+        return False
+    except oracledb.DatabaseError as erro:
+        conn.rollback()
+        print("ERRO! Falha ao acessar o banco: ", erro)
+        return False
+    finally:
+        conn.close()
+
+# tabela -> dicionário (mesmo formato usado no programa)
+def tabela_para_dict() -> dict:
+    conn = connect_db()
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT CPF, NOME, SENHA, SALDO_PONTOS, SALDO_REAIS FROM {DB_TABLE} ORDER BY CPF"
+        )
+
+        contas = {}
+
+        for cpf, nome, senha, pontos, reais in cursor:
+            pontos = float(pontos)
+
+            contas[cpf] = {
+                "name": nome,
+                "password": senha,
+                "points_balance": pontos,
+                "money_balance": float(reais)
+            }
+
+        return contas
+
+    finally:
+        conn.close()
+
+# tabela -> json    (gera o arquivo accounts.json a partir do banco)
+def tabela_para_json() -> None:
+    try:
+        contas = tabela_para_dict()
+
+        with open(JSON_FILE, "w", encoding="utf-8") as file:
+            json.dump(contas, file, ensure_ascii=False, indent=4)
+
+    except oracledb.DatabaseError as erro:
+        print("ERRO! Não foi possível ler o banco: ", erro)
+    except OSError:
+        print("ERRO! Não foi possível salvar o arquivo JSON.")
+
+# carregar contas (banco; se falhar, usa o arquivo json)
 def load_accounts() -> dict:
-    if not os.path.exists("accounts.jsn"):
+    try:
+        return tabela_para_dict()
+    except oracledb.DatabaseError as erro:
+        print("Aviso: não foi possível ler o banco: ", erro)
+
+    if not os.path.exists(JSON_FILE):
         return {}
     try:
-        with open("accounts.json", "r", encoding="utf-8") as file:
+        with open(JSON_FILE, "r", encoding="utf-8") as file:
             return json.load(file)
     except (json.JSONDecodeError, OSError):
-        print("Aviso: não foi possível ler accounts.json. Iniciando vazio.")
+        print(f"Aviso: não foi possível ler {JSON_FILE}. Iniciando vazio.")
         return {}
 
-# salvar contas no arquivo json
-def save_accounts(d: dict) -> None:
-    try:
-        with open("accounts.json", "w", encoding="utf-8") as file:
-            json.dump(d, file, indent=4)
-    except OSError:
-        print("ERRO! Não foi possível salvar as contas.")
+# salvar contas no arquivo json (sempre a partir do banco)
+def save_accounts(d: dict = None) -> None:
+    tabela_para_json()
 
 # cotação dólar (API pública AwesomeAPI) -> retorna quantos reais vale 1 dólar
 def get_usd_rate() -> float | None:
@@ -129,12 +209,23 @@ def create_account(d: dict) -> None:
 
     balance = 0
 
+    # grava no banco primeiro
+    cadastro = f"""
+        INSERT INTO {DB_TABLE} (CPF, NOME, SENHA, SALDO_PONTOS, SALDO_REAIS)
+        VALUES (:1, :2, :3, :4, :5)
+    """
+
+    if not execute_db(cadastro, [create_user, name, create_password, balance, 0]):
+        return
+
     d[create_user] = {
         "name": name,
         "password": create_password,
         "points_balance": balance,
         "money_balance": 0
     }
+
+    tabela_para_json()
 
     print("Conta criada com sucesso!")
 
@@ -196,11 +287,26 @@ def convert_points(d: dict, current_user: str) -> None:
 
             match confirm:
                 case "sim" | "ss" | "s":
-                    d[current_user]["points_balance"] -= points_to_convert
-
                     money = points_to_convert / 10
 
-                    d[current_user]["money_balance"] += money
+                    new_points = round(d[current_user]["points_balance"] - points_to_convert, 2)
+                    new_money = round(d[current_user]["money_balance"] + money, 2)
+
+                    # atualiza o banco primeiro
+                    atualizar = f"""
+                        UPDATE {DB_TABLE}
+                        SET SALDO_PONTOS = :1, SALDO_REAIS = :2
+                        WHERE CPF = :3
+                    """
+
+                    if not execute_db(atualizar, [new_points, new_money, current_user]):
+                        print("Conversão não realizada.")
+                        return
+
+                    d[current_user]["points_balance"] = new_points
+                    d[current_user]["money_balance"] = new_money
+
+                    tabela_para_json()
 
                     print(f"Novo saldo de pontos: {d[current_user]['points_balance']}")
                     print(f"Saldo em reais: R${d[current_user]['money_balance']:.2f}")
@@ -252,7 +358,22 @@ def withdraw_money(d: dict, current_user: str) -> None:
 
         match confirm:
             case "sim" | "ss" | "s":
-                d[current_user]["money_balance"] -= withdrawal
+                new_money = round(money_balance - withdrawal, 2)
+
+                # atualiza o banco primeiro
+                atualizar = f"""
+                    UPDATE {DB_TABLE}
+                    SET SALDO_REAIS = :1
+                    WHERE CPF = :2
+                """
+
+                if not execute_db(atualizar, [new_money, current_user]):
+                    print("Saque não realizado.")
+                    return
+
+                d[current_user]["money_balance"] = new_money
+
+                tabela_para_json()
 
                 print(f"Saque de {message} será realizado em até 48 horas.")
                 print(f"Novo saldo: R${d[current_user]['money_balance']:.2f}")
@@ -303,7 +424,16 @@ def delete_account(d: dict, current_user: str | None) -> tuple[bool, str | None]
             password_confirmation = input("Digite sua senha para confirmar: ")
 
             if password_confirmation == d[current_user]["password"]:
+                # exclui do banco primeiro
+                excluir = f"DELETE FROM {DB_TABLE} WHERE CPF = :1"
+
+                if not execute_db(excluir, [current_user]):
+                    print("Conta não excluída.")
+                    return True, current_user
+
                 del d[current_user]
+
+                tabela_para_json()
 
                 print("Conta excluída com sucesso!")
 
@@ -355,12 +485,26 @@ def watch_videos(d: dict, current_user: str) -> None:
                 case 1:
                     video_time = random.randint(10, 120)
 
-                    watched_videos += 1
-                    d[current_user]["points_balance"] += video_time
+                    new_points = d[current_user]["points_balance"] + video_time
 
-                    print(f"Vídeo assistido: {video_time}s")
-                    print(f"Você ganhou {video_time} pontos!")
-                    print(f"Saldo: {d[current_user]['points_balance']} pontos")
+                    # atualiza o banco primeiro
+                    atualizar = f"""
+                        UPDATE {DB_TABLE}
+                        SET SALDO_PONTOS = :1
+                        WHERE CPF = :2
+                    """
+
+                    if execute_db(atualizar, [new_points, current_user]):
+                        watched_videos += 1
+                        d[current_user]["points_balance"] = new_points
+
+                        tabela_para_json()
+
+                        print(f"Vídeo assistido: {video_time}s")
+                        print(f"Você ganhou {video_time} pontos!")
+                        print(f"Saldo: {d[current_user]['points_balance']} pontos")
+                    else:
+                        print("Não foi possível salvar os pontos.")
 
                 case 2:
                     print(f"Você assistiu {watched_videos} videos")

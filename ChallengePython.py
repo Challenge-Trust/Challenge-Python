@@ -4,9 +4,11 @@ clear_screen()
 
 print("Bem Vindo ao Conversor de pontos")
 
-# armazenar usuarios
+# armazenar usuarios (carregados do banco de dados)
 user = load_accounts()
 
+# sincroniza o arquivo json com o banco ao iniciar
+tabela_para_json()
 
 logged_in = False
 current_user = None
@@ -86,8 +88,6 @@ while True:
 
             case _:
                 print("Opção inválida!")
-
-        save_accounts(user)
 
         input("Pressiona ENTER para continuar . . .")
 
